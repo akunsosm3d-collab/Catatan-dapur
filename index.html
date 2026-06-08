@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catatan Dapur</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+body{background:#f8f9fa;max-width:500px;margin:auto;min-height:100vh}
+.header{text-align:center;padding:20px;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.header h2{color:#d63384;font-size:22px}
+.content{padding:20px}
+
+.btn-row{display:flex;gap:10px;margin-bottom:15px}
+.btn-row button{flex:1;padding:15px;border:none;border-radius:15px;font-size:15px;font-weight:600;cursor:pointer}
+#btnTambah{background:linear-gradient(135deg,#d63384,#ff6b9d);color:white;box-shadow:0 4px 12px rgba(214,51,132,0.3)}
+#btnBelanja{background:white;color:#d63384;border:2px solid #d63384}
+
+#kotakInput,#kotakBelanja{display:none;background:white;padding:20px;border-radius:20px;margin-top:15px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+label{font-size:13px;color:#666;margin-top:10px;display:block;font-weight:500}
+input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;margin-top:5px;font-size:15px;background:#fafafa}
+.btn-group{display:flex;gap:10px;margin-top:15px}
+.btn-group button{flex:1;padding:12px;border:none;border-radius:12px;font-weight:600;cursor:pointer}
+.simpan{background:#d63384;color:white}
+.batal{background:#e9ecef;color:#666}
+.tambah-barang{background:#28a745;color:white;width:100%;margin-top:10px}
+
+.card{background:white;padding:15px;border-radius:18px;margin-top:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);border-left:4px solid #d63384;cursor:pointer}
+.card-top{display:flex;justify-content:space-between;align-items:start;margin-bottom:8px}
+.card-nama{font-size:16px;font-weight:600;color:#333}
+.card-harga{font-size:18px;font-weight:700;color:#d63384}
+.card-info{font-size:13px;color:#888}
+.badge{font-size:11px;background:#ffe0e9;color:#d63384;padding:3px 8px;border-radius:20px;font-weight:600}
+
+.page{display:none}
+.page.active{display:block}
+.back-btn{background:none;border:none;color:#d63384;font-size:16px;font-weight:600;cursor:pointer;margin-bottom:15px}
+
+.riwayat-item{background:white;padding:12px;border-radius:12px;margin-top:8px;border-left:3px solid #d63384}
+.riwayat-top{display:flex;justify-content:space-between;font-weight:600;margin-bottom:6px}
+.riwayat-info{font-size:13px;color:#666;margin-bottom:8px}
+.riwayat-aksi{display:flex;gap:8px}
+.riwayat-aksi button{flex:1;padding:6px;border:none;border-radius:8px;font-size:12px;font-weight:500}
+.edit{background:#fff3cd;color:#856404}
+.hapus{background:#f8d7da;color:#721c24}
+
+.item-belanja{display:flex;gap:8px;margin-top:8px;align-items:center}
+.item-belanja input{flex:1;margin:0}
+.hapus-item{background:#dc3545;color:white;border:none;border-radius:8px;padding:8px 12px;cursor:pointer}
+.hasil-item{background:#f8f9fa;padding:10px;border-radius:10px;margin-top:8px;display:flex;justify-content:space-between}
+.total-box{background:#d63384;color:white;padding:15px;border-radius:15px;margin-top:15px;text-align:center;font-size:18px;font-weight:700}
+</style>
+</head>
+<body>
+
+<div class="page active" id="halamanUtama">
+<div class="header"><h2>Catatan Dapur Berkah 💕</h2></div>
+<div class="content">
+<div class="btn-row">
+<button id="btnTambah" onclick="toggleKotak('input')">+ Tambah</button>
+<button id="btnBelanja" onclick="toggleKotak('belanja')">Mau Belanja</button>
+</div>
+
+<div id="kotakInput">
+<h3 id="judulForm">Data Barang</h3>
+<label>Tanggal Beli *</label>
+<input id="tanggal" type="date">
+<label>Nama Barang *</label>
+<input id="nama" placeholder="Contoh: Ayam">
+<label>Kategori</label>
+<input id="kategori" placeholder="Contoh: Protein">
+<label>Harga *</label>
+<input id="harga" type="number" placeholder="Contoh: 50000">
+<label>Versi/Kemasan</label>
+<input id="versi" placeholder="Contoh: 1kg">
+<label>Masa Pakai (hari)</label>
+<input id="masa" type="number" placeholder="Contoh: 7">
+<div class="btn-group">
+<button class="simpan" onclick="simpan()">Simpan</button>
+<button class="batal" onclick="batalEdit()">Batal</button>
+</div>
+</div>
+
+<div id="kotakBelanja">
+<h3>Daftar Belanja</h3>
+<div id="listBelanja">
+<div class="item-belanja">
+<input class="namaBelanja" placeholder="Ketik nama barang">
+</div>
+</div>
+<button class="tambah-barang" onclick="tambahBarisBelanja()">+ Tambah Barang</button>
+<button class="simpan" onclick="periksaTotal()" style="width:100%;margin-top:10px">Periksa Total</button>
+<button class="batal" onclick="toggleKotak('belanja')" style="width:100%;margin-top:5px">Tutup</button>
+<div id="hasilBelanja"></div>
+</div>
+
+<div id="listBarang"></div>
+</div>
+</div>
+
+<div class="page" id="halamanRiwayat">
+<div class="header">
+<button class="back-btn" onclick="kembali()">← Kembali</button>
+<h2 id="judulRiwayat">Riwayat</h2>
+</div>
+<div class="content" id="listRiwayat"></div>
+</div>
+
+<script>
+let data = JSON.parse(localStorage.getItem('barang')) || [];
+let modeEdit = -1;
+let namaRiwayatAktif = '';
+
+function toggleKotak(jenis){
+document.getElementById('kotakInput').style.display = 'none';
+document.getElementById('kotakBelanja').style.display = 'none';
+if(jenis=='input') document.getElementById('kotakInput').style.display = 'block';
+if(jenis=='belanja'){
+document.getElementById('kotakBelanja').style.display = 'block';
+resetBelanja();
+}
+}
+
+function batalEdit(){
+document.getElementById('tanggal').value='';
+document.getElementById('nama').value='';
+document.getElementById('kategori').value='';
+document.getElementById('harga').value='';
+document.getElementById('versi').value='';
+document.getElementById('masa').value='';
+modeEdit = -1;
+document.getElementById('judulForm').innerText = 'Data Barang';
+document.querySelector('#kotakInput.simpan').innerText = 'Simpan';
+document.getElementById('nama').disabled = false;
+document.getElementById('kotakInput').style.display = 'none';
+}
+
+function simpan(){
+let tgl = document.getElementById('tanggal').value;
+let nama = document.getElementById('nama').value.trim();
+let harga = document.getElementById('harga').value;
+
+if(!tgl ||!nama ||!harga){
+alert('Tanggal, Nama, Harga wajib diisi ya mas!');
+return;
+}
+
+let item = {
+tanggal: tgl,
+nama: nama,
+kategori: document.getElementById('kategori').value,
+harga: harga,
+versi: document.getElementById('versi').value,
+masa: document.getElementById('masa').value,
+id: modeEdit == -1? Date.now() : data[modeEdit].id
+};
+
+if(modeEdit == -1) data.push(item);
+else data[modeEdit] = item;
+
+localStorage.setItem('barang', JSON.stringify(data));
+batalEdit();
+tampilCard();
+if(namaRiwayatAktif) bukaRiwayat(namaRiwayatAktif);
+}
+
+function tampilCard(){
+let grup = {};
+data.forEach(d=>{
+if(!grup[d.nama]) grup[d.nama] = [];
+grup[d.nama].push(d);
+});
+
+let html = '';
+for(let nama in grup){
+let riwayat = grup[nama].sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+let terbaru = riwayat[0];
+let jumlahBeli = riwayat.length;
+
+html += `<div class="card" onclick="bukaRiwayat('${nama}')">
+<div class="card-top">
+<div>
+<div class="card-nama">${nama}</div>
+<div class="card-info">${terbaru.kategori || 'Tanpa kategori'} • ${terbaru.versi || '-'}</div>
+</div>
+<div style="text-align:right">
+<div class="card-harga">Rp ${Number(terbaru.harga).toLocaleString('id-ID')}</div>
+<div class="badge">${jumlahBeli}x beli</div>
+</div>
+</div>
+<div class="card-info">Terakhir: ${formatTanggal(terbaru.tanggal)}</div>
+</div>`;
+}
+if(html=='') html = '<div style="text-align:center;color:#aaa;padding:40px">Belum ada barang</div>';
+document.getElementById('listBarang').innerHTML = html;
+}
+
+function bukaRiwayat(namaBarang){
+namaRiwayatAktif = namaBarang;
+document.getElementById('halamanUtama').classList.remove('active');
+document.getElementById('halamanRiwayat').classList.add('active');
+document.getElementById('judulRiwayat').innerText = 'Riwayat ' + namaBarang;
+
+let riwayat = data.filter(d=>d.nama==namaBarang).sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+let html = '';
+riwayat.forEach(d=>{
+let indexAsli = data.findIndex(x=>x.id==d.id);
+html += `<div class="riwayat-item">
+<div class="riwayat-top">
+<span>${formatTanggal(d.tanggal)}</span>
+<span>Rp ${Number(d.harga).toLocaleString('id-ID')}</span>
+</div>
+<div class="riwayat-info">
+${d.kategori || '-'} • ${d.versi || '-'} • Masa: ${d.masa || '-'} hari
+</div>
+<div class="riwayat-aksi">
+<button class="edit" onclick="editData(${indexAsli})">Edit</button>
+<button class="hapus" onclick="hapus(${indexAsli})">Hapus</button>
+</div>
+</div>`;
+});
+document.getElementById('listRiwayat').innerHTML = html;
+}
+
+function editData(i){
+modeEdit = i;
+let d = data[i];
+document.getElementById('tanggal').value = d.tanggal;
+document.getElementById('nama').value = d.nama;
+document.getElementById('kategori').value = d.kategori;
+document.getElementById('harga').value = d.harga;
+document.getElementById('versi').value = d.versi;
+document.getElementById('masa').value = d.masa;
+document.getElementById('judulForm').innerText = 'Edit Barang';
+document.querySelector('#kotakInput.simpan').innerText = 'Update';
+document.getElementById('nama').disabled = true;
+document.getElementById('kotakInput').style.display = 'block';
+window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function hapus(i){
+if(confirm('Yakin hapus data ini?')){
+data.splice(i,1);
+localStorage.setItem('barang', JSON.stringify(data));
+bukaRiwayat(namaRiwayatAktif);
+tampilCard();
+}
+}
+
+function kembali(){
+namaRiwayatAktif = '';
+document.getElementById('halamanRiwayat').classList.remove('active');
+document.getElementById('halamanUtama').classList.add('active');
+}
+
+function formatTanggal(tgl){
+return new Date(tgl).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+}
+
+// === FUNGSI BELANJA BARU ===
+function resetBelanja(){
+document.getElementById('listBelanja').innerHTML = '<div class="item-belanja"><input class="namaBelanja" placeholder="Ketik nama barang"></div>';
+document.getElementById('hasilBelanja').innerHTML = '';
+}
+
+function tambahBarisBelanja(){
+let div = document.createElement('div');
+div.className = 'item-belanja';
+div.innerHTML = '<input class="namaBelanja" placeholder="Ketik nama barang"><button class="hapus-item" onclick="this.parentElement.remove()">X</button>';
+document.getElementById('listBelanja').appendChild(div);
+}
+
+function periksaTotal(){
+let inputs = document.querySelectorAll('.namaBelanja');
+let hasilDiv = document.getElementById('hasilBelanja');
+hasilDiv.innerHTML = '';
+let total = 0;
+let adaYangKosong = false;
+
+inputs.forEach(input=>{
+let namaCari = input.value.trim().toLowerCase();
+if(!namaCari) {adaYangKosong=true; return;}
+
+let dataBarang = data.filter(d=>d.nama.toLowerCase()==namaCari);
+if(dataBarang.length==0){
+hasilDiv.innerHTML += `<div class="hasil-item" style="color:red">❌ ${input.value} - Belum ada data</div>`;
+return;
+}
+
+// ambil harga terbaru per versi
+let versiMap = {};
+dataBarang.forEach(d=>{
+if(!versiMap[d.versi] || new Date(d.tanggal) > new Date(versiMap[d.versi].tanggal)){
+versiMap[d.versi] = d;
+}
+});
+let versiList = Object.values(versiMap);
+
+if(versiList.length==1){
+let item = versiList[0];
+total += Number(item.harga);
+hasilDiv.innerHTML += `<div class="hasil-item"><span>${item.nama} ${item.versi? '('+item.versi+')' : ''}</span><span>Rp ${Number(item.harga).toLocaleString('id-ID')}</span></div>`;
+} else {
+let pilihVersi = prompt(`"${input.value}" ada ${versiList.length} versi:\n` + versiList.map((v,i)=>`${i+1}. ${v.versi || 'Tanpa versi'} - Rp ${Number(v.harga).toLocaleString('id-ID')} - ${formatTanggal(v.tanggal)}`).join('\n') + '\n\nPilih nomor versi:');
+let idx = parseInt(pilihVersi)-1;
+if(!isNaN(idx) && versiList[idx]){
+let item = versiList[idx];
+total += Number(item.harga);
+hasilDiv.innerHTML += `<div class="hasil-item"><span>${item.nama} (${item.versi})</span><span>Rp ${Number(item.harga).toLocaleString('id-ID')}</span></div>`;
+}
+}
+});
+
+if(!adaYangKosong && total>0){
+hasilDiv.innerHTML += `<div class="total-box">Total Belanja: Rp ${total.toLocaleString('id-ID')}</div>`;
+}
+}
+
+tampilCard();
+</script>
+</body>
+</html>
