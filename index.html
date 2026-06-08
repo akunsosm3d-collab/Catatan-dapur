@@ -76,7 +76,7 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 <label>Masa Pakai (hari)</label>
 <input id="masa" type="number" placeholder="Contoh: 7">
 <div class="btn-group">
-<button class="simpan" onclick="simpan()">Simpan</button>
+<button id="btnSimpan" class="simpan" onclick="simpan()">Simpan</button>
 <button class="batal" onclick="batalEdit()">Batal</button>
 </div>
 </div>
@@ -88,6 +88,7 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 <input class="namaBelanja" placeholder="Ketik nama barang">
 </div>
 </div>
+<button onclick="tesFirebase()">Tes Firebase</button>
 <button class="tambah-barang" onclick="tambahBarisBelanja()">+ Tambah Barang</button>
 <button class="simpan" onclick="periksaTotal()" style="width:100%;margin-top:10px">Periksa Total</button>
 <button class="batal" onclick="toggleKotak('belanja')" style="width:100%;margin-top:5px">Tutup</button>
@@ -105,218 +106,268 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 </div>
 <div class="content" id="listRiwayat"></div>
 </div>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
-<script>
-let data = JSON.parse(localStorage.getItem('barang')) || [];
+const firebaseConfig = {
+  apiKey: "AIzaSyDeQOFjhyYMBP230Wzxz75_Yhf0Ls6ROM0",
+  authDomain: "catatan-dapur.firebaseapp.com",
+  projectId: "catatan-dapur",
+  storageBucket: "catatan-dapur.firebasestorage.app",
+  messagingSenderId: "1049359194993",
+  appId: "1:1049359194993:web:0d0c5fce792535f69074d0",
+  measurementId: "G-1N869EM5ZD"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let data = [];
 let modeEdit = -1;
 let namaRiwayatAktif = '';
 
-function toggleKotak(jenis){
-document.getElementById('kotakInput').style.display = 'none';
-document.getElementById('kotakBelanja').style.display = 'none';
-if(jenis=='input') document.getElementById('kotakInput').style.display = 'block';
-if(jenis=='belanja'){
-document.getElementById('kotakBelanja').style.display = 'block';
-resetBelanja();
+// Load data dari Firebase pas buka
+async function loadData(){
+  const querySnapshot = await getDocs(collection(db, "barang"));
+  data = [];
+  querySnapshot.forEach((docSnap) => {
+    data.push({ idFirebase: docSnap.id,...docSnap.data() });
+  });
+  tampilCard();
 }
+loadData();
+
+// Fungsi simpan ke Firebase
+async function simpan(){
+  let tgl = document.getElementById('tanggal').value;
+  let nama = document.getElementById('nama').value.trim();
+  let harga = document.getElementById('harga').value;
+
+  if(!tgl ||!nama ||!harga){
+    alert('Tanggal, Nama, Harga wajib diisi ya mas!');
+    return;
+  }
+
+  let item = {
+    tanggal: tgl,
+    nama: nama,
+    kategori: document.getElementById('kategori').value,
+    harga: Number(harga),
+    versi: document.getElementById('versi').value,
+    masa: document.getElementById('masa').value
+  };
+
+  if(modeEdit == -1){
+    await addDoc(collection(db, "barang"), item);
+  } else {
+    // Update - hapus lama, tambah baru
+    await deleteDoc(doc(db, "barang", data[modeEdit].idFirebase));
+    await addDoc(collection(db, "barang"), item);
+  }
+
+  batalEdit();
+  loadData();
+  if(namaRiwayatAktif) bukaRiwayat(namaRiwayatAktif);
+}
+
+// Fungsi hapus dari Firebase
+async function hapus(i){
+  if(confirm('Yakin hapus data ini?')){
+    await deleteDoc(doc(db, "barang", data[i].idFirebase));
+    loadData();
+    bukaRiwayat(namaRiwayatAktif);
+  }
+}
+
+// Sisa fungsi kamu biarin aja, cuma ganti `data` jadi global
+function toggleKotak(jenis){
+  document.getElementById('kotakInput').style.display = 'none';
+  document.getElementById('kotakBelanja').style.display = 'none';
+  if(jenis=='input') document.getElementById('kotakInput').style.display = 'block';
+  if(jenis=='belanja'){
+    document.getElementById('kotakBelanja').style.display = 'block';
+    resetBelanja();
+  }
 }
 
 function batalEdit(){
-document.getElementById('tanggal').value='';
-document.getElementById('nama').value='';
-document.getElementById('kategori').value='';
-document.getElementById('harga').value='';
-document.getElementById('versi').value='';
-document.getElementById('masa').value='';
-modeEdit = -1;
-document.getElementById('judulForm').innerText = 'Data Barang';
-document.querySelector('#kotakInput.simpan').innerText = 'Simpan';
-document.getElementById('nama').disabled = false;
-document.getElementById('kotakInput').style.display = 'none';
-}
-
-function simpan(){
-let tgl = document.getElementById('tanggal').value;
-let nama = document.getElementById('nama').value.trim();
-let harga = document.getElementById('harga').value;
-
-if(!tgl ||!nama ||!harga){
-alert('Tanggal, Nama, Harga wajib diisi ya mas!');
-return;
-}
-
-let item = {
-tanggal: tgl,
-nama: nama,
-kategori: document.getElementById('kategori').value,
-harga: harga,
-versi: document.getElementById('versi').value,
-masa: document.getElementById('masa').value,
-id: modeEdit == -1? Date.now() : data[modeEdit].id
-};
-
-if(modeEdit == -1) data.push(item);
-else data[modeEdit] = item;
-
-localStorage.setItem('barang', JSON.stringify(data));
-batalEdit();
-tampilCard();
-if(namaRiwayatAktif) bukaRiwayat(namaRiwayatAktif);
+  document.getElementById('tanggal').value='';
+  document.getElementById('nama').value='';
+  document.getElementById('kategori').value='';
+  document.getElementById('harga').value='';
+  document.getElementById('versi').value='';
+  document.getElementById('masa').value='';
+  modeEdit = -1;
+  document.getElementById('judulForm').innerText = 'Data Barang';
+  document.getElementById('btnSimpan').innerText = 'Simpan';
+  document.getElementById('nama').disabled = false;
+  document.getElementById('kotakInput').style.display = 'none';
 }
 
 function tampilCard(){
-let grup = {};
-data.forEach(d=>{
-if(!grup[d.nama]) grup[d.nama] = [];
-grup[d.nama].push(d);
-});
+  let grup = {};
+  data.forEach(d=>{
+    if(!grup[d.nama]) grup[d.nama] = [];
+    grup[d.nama].push(d);
+  });
 
-let html = '';
-for(let nama in grup){
-let riwayat = grup[nama].sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
-let terbaru = riwayat[0];
-let jumlahBeli = riwayat.length;
+  let html = '';
+  for(let nama in grup){
+    let riwayat = grup[nama].sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+    let terbaru = riwayat[0];
+    let jumlahBeli = riwayat.length;
 
-html += `<div class="card" onclick="bukaRiwayat('${nama}')">
-<div class="card-top">
-<div>
-<div class="card-nama">${nama}</div>
-<div class="card-info">${terbaru.kategori || 'Tanpa kategori'} • ${terbaru.versi || '-'}</div>
-</div>
-<div style="text-align:right">
-<div class="card-harga">Rp ${Number(terbaru.harga).toLocaleString('id-ID')}</div>
-<div class="badge">${jumlahBeli}x beli</div>
-</div>
-</div>
-<div class="card-info">Terakhir: ${formatTanggal(terbaru.tanggal)}</div>
-</div>`;
-}
-if(html=='') html = '<div style="text-align:center;color:#aaa;padding:40px">Belum ada barang</div>';
-document.getElementById('listBarang').innerHTML = html;
-}
-
-function bukaRiwayat(namaBarang){
-namaRiwayatAktif = namaBarang;
-document.getElementById('halamanUtama').classList.remove('active');
-document.getElementById('halamanRiwayat').classList.add('active');
-document.getElementById('judulRiwayat').innerText = 'Riwayat ' + namaBarang;
-
-let riwayat = data.filter(d=>d.nama==namaBarang).sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
-let html = '';
-riwayat.forEach(d=>{
-let indexAsli = data.findIndex(x=>x.id==d.id);
-html += `<div class="riwayat-item">
-<div class="riwayat-top">
-<span>${formatTanggal(d.tanggal)}</span>
-<span>Rp ${Number(d.harga).toLocaleString('id-ID')}</span>
-</div>
-<div class="riwayat-info">
-${d.kategori || '-'} • ${d.versi || '-'} • Masa: ${d.masa || '-'} hari
-</div>
-<div class="riwayat-aksi">
-<button class="edit" onclick="editData(${indexAsli})">Edit</button>
-<button class="hapus" onclick="hapus(${indexAsli})">Hapus</button>
-</div>
-</div>`;
-});
-document.getElementById('listRiwayat').innerHTML = html;
+    html += `<div class="card" onclick="bukaRiwayat('${nama}')">
+    <div class="card-top">
+    <div>
+    <div class="card-nama">${nama}</div>
+    <div class="card-info">${terbaru.kategori || 'Tanpa kategori'} • ${terbaru.versi || '-'}</div>
+    </div>
+    <div style="text-align:right">
+    <div class="card-harga">Rp ${Number(terbaru.harga).toLocaleString('id-ID')}</div>
+    <div class="badge">${jumlahBeli}x beli</div>
+    </div>
+    </div>
+    <div class="card-info">Terakhir: ${formatTanggal(terbaru.tanggal)}</div>
+    </div>`;
+  }
+  if(html=='') html = '<div style="text-align:center;color:#aaa;padding:40px">Belum ada barang</div>';
+  document.getElementById('listBarang').innerHTML = html;
 }
 
-function editData(i){
-modeEdit = i;
-let d = data[i];
-document.getElementById('tanggal').value = d.tanggal;
-document.getElementById('nama').value = d.nama;
-document.getElementById('kategori').value = d.kategori;
-document.getElementById('harga').value = d.harga;
-document.getElementById('versi').value = d.versi;
-document.getElementById('masa').value = d.masa;
-document.getElementById('judulForm').innerText = 'Edit Barang';
-document.querySelector('#kotakInput.simpan').innerText = 'Update';
-document.getElementById('nama').disabled = true;
-document.getElementById('kotakInput').style.display = 'block';
-window.scrollTo({top:0,behavior:'smooth'});
+window.bukaRiwayat = function(namaBarang){
+  namaRiwayatAktif = namaBarang;
+  document.getElementById('halamanUtama').classList.remove('active');
+  document.getElementById('halamanRiwayat').classList.add('active');
+  document.getElementById('judulRiwayat').innerText = 'Riwayat ' + namaBarang;
+
+  let riwayat = data.filter(d=>d.nama==namaBarang).sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+  let html = '';
+  riwayat.forEach((d, idx)=>{
+    html += `<div class="riwayat-item">
+    <div class="riwayat-top">
+    <span>${formatTanggal(d.tanggal)}</span>
+    <span>Rp ${Number(d.harga).toLocaleString('id-ID')}</span>
+    </div>
+    <div class="riwayat-info">
+    ${d.kategori || '-'} • ${d.versi || '-'} • Masa: ${d.masa || '-'} hari
+    </div>
+    <div class="riwayat-aksi">
+    <button class="edit" onclick="editData(${idx})">Edit</button>
+    <button class="hapus" onclick="hapus(${idx})">Hapus</button>
+    </div>
+    </div>`;
+  });
+  document.getElementById('listRiwayat').innerHTML = html;
 }
 
-function hapus(i){
-if(confirm('Yakin hapus data ini?')){
-data.splice(i,1);
-localStorage.setItem('barang', JSON.stringify(data));
-bukaRiwayat(namaRiwayatAktif);
-tampilCard();
-}
-}
-
-function kembali(){
-namaRiwayatAktif = '';
-document.getElementById('halamanRiwayat').classList.remove('active');
-document.getElementById('halamanUtama').classList.add('active');
+window.editData = function(i){
+  modeEdit = i;
+  let d = data[i];
+  document.getElementById('tanggal').value = d.tanggal;
+  document.getElementById('nama').value = d.nama;
+  document.getElementById('kategori').value = d.kategori;
+  document.getElementById('harga').value = d.harga;
+  document.getElementById('versi').value = d.versi;
+  document.getElementById('masa').value = d.masa;
+  document.getElementById('judulForm').innerText = 'Edit Barang';
+  document.getElementById('btnSimpan').innerText = 'Update';
+  document.getElementById('nama').disabled = true;
+  document.getElementById('kotakInput').style.display = 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 function formatTanggal(tgl){
-return new Date(tgl).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+  return new Date(tgl).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
 }
 
-// === FUNGSI BELANJA BARU ===
 function resetBelanja(){
-document.getElementById('listBelanja').innerHTML = '<div class="item-belanja"><input class="namaBelanja" placeholder="Ketik nama barang"></div>';
-document.getElementById('hasilBelanja').innerHTML = '';
+  document.getElementById('listBelanja').innerHTML = '<div class="item-belanja"><input class="namaBelanja" placeholder="Ketik nama barang"></div>';
+  document.getElementById('hasilBelanja').innerHTML = '';
 }
 
-function tambahBarisBelanja(){
-let div = document.createElement('div');
-div.className = 'item-belanja';
-div.innerHTML = '<input class="namaBelanja" placeholder="Ketik nama barang"><button class="hapus-item" onclick="this.parentElement.remove()">X</button>';
-document.getElementById('listBelanja').appendChild(div);
+window.tambahBarisBelanja = function(){
+  let div = document.createElement('div');
+  div.className = 'item-belanja';
+  div.innerHTML = '<input class="namaBelanja" placeholder="Ketik nama barang"><button class="hapus-item" onclick="this.parentElement.remove()">X</button>';
+  document.getElementById('listBelanja').appendChild(div);
 }
 
-function periksaTotal(){
-let inputs = document.querySelectorAll('.namaBelanja');
-let hasilDiv = document.getElementById('hasilBelanja');
-hasilDiv.innerHTML = '';
-let total = 0;
-let adaYangKosong = false;
+window.periksaTotal = function(){
+  let inputs = document.querySelectorAll('.namaBelanja');
+  let hasilDiv = document.getElementById('hasilBelanja');
+  hasilDiv.innerHTML = '';
+  let total = 0;
 
-inputs.forEach(input=>{
-let namaCari = input.value.trim().toLowerCase();
-if(!namaCari) {adaYangKosong=true; return;}
+  inputs.forEach(input=>{
+    let namaCari = input.value.trim().toLowerCase();
+    if(!namaCari) return;
 
-let dataBarang = data.filter(d=>d.nama.toLowerCase()==namaCari);
-if(dataBarang.length==0){
-hasilDiv.innerHTML += `<div class="hasil-item" style="color:red">❌ ${input.value} - Belum ada data</div>`;
-return;
+    let dataBarang = data.filter(d=>d.nama.toLowerCase()==namaCari);
+    if(dataBarang.length==0){
+      hasilDiv.innerHTML += `<div class="hasil-item" style="color:red">❌ ${input.value} - Belum ada data</div>`;
+      return;
+    }
+
+    let versiMap = {};
+    dataBarang.forEach(d=>{
+      if(!versiMap[d.versi] || new Date(d.tanggal) > new Date(versiMap[d.versi].tanggal)){
+        versiMap[d.versi] = d;
+      }
+    });
+    let versiList = Object.values(versiMap);
+
+    if(versiList.length==1){
+      let item = versiList[0];
+      total += Number(item.harga);
+      hasilDiv.innerHTML += `<div class="hasil-item"><span>${item.nama} ${item.versi? '('+item.versi+')' : ''}</span><span>Rp ${Number(item.harga).toLocaleString('id-ID')}</span></div>`;
+    } else {
+      let pilihVersi = prompt(`"${input.value}" ada ${versiList.length} versi:\n` + versiList.map((v,i)=>`${i+1}. ${v.versi || 'Tanpa versi'} - Rp ${Number(v.harga).toLocaleString('id-ID')} - ${formatTanggal(v.tanggal)}`).join('\n') + '\n\nPilih nomor versi:');
+      let idx = parseInt(pilihVersi)-1;
+      if(!isNaN(idx) && versiList[idx]){
+        let item = versiList[idx];
+        total += Number(item.harga);
+        hasilDiv.innerHTML += `<div class="hasil-item"><span>${item.nama} (${item.versi})</span><span>Rp ${Number(item.harga).toLocaleString('id-ID')}</span></div>`;
+      }
+    }
+  });
+
+  if(total>0){
+    hasilDiv.innerHTML += `<div class="total-box">Total Belanja: Rp ${total.toLocaleString('id-ID')}</div>`;
+  }
 }
 
-// ambil harga terbaru per versi
-let versiMap = {};
-dataBarang.forEach(d=>{
-if(!versiMap[d.versi] || new Date(d.tanggal) > new Date(versiMap[d.versi].tanggal)){
-versiMap[d.versi] = d;
-}
-});
-let versiList = Object.values(versiMap);
-
-if(versiList.length==1){
-let item = versiList[0];
-total += Number(item.harga);
-hasilDiv.innerHTML += `<div class="hasil-item"><span>${item.nama} ${item.versi? '('+item.versi+')' : ''}</span><span>Rp ${Number(item.harga).toLocaleString('id-ID')}</span></div>`;
-} else {
-let pilihVersi = prompt(`"${input.value}" ada ${versiList.length} versi:\n` + versiList.map((v,i)=>`${i+1}. ${v.versi || 'Tanpa versi'} - Rp ${Number(v.harga).toLocaleString('id-ID')} - ${formatTanggal(v.tanggal)}`).join('\n') + '\n\nPilih nomor versi:');
-let idx = parseInt(pilihVersi)-1;
-if(!isNaN(idx) && versiList[idx]){
-let item = versiList[idx];
-total += Number(item.harga);
-hasilDiv.innerHTML += `<div class="hasil-item"><span>${item.nama} (${item.versi})</span><span>Rp ${Number(item.harga).toLocaleString('id-ID')}</span></div>`;
-}
-}
-});
-
-if(!adaYangKosong && total>0){
-hasilDiv.innerHTML += `<div class="total-box">Total Belanja: Rp ${total.toLocaleString('id-ID')}</div>`;
-}
+window.tesFirebase = async function(){
+  try{
+    await addDoc(collection(db,"barang"), {
+      nama:"Tes",
+      tanggal:new Date().toISOString()
+    });
+    alert("Berhasil kirim ke Firebase ✅");
+    loadData();
+  }catch(error){
+    alert("ERROR: " + error.message);
+    console.error(error);
+  }
 }
 
-tampilCard();
+// Kasih akses ke HTML onclick
+window.simpan = simpan;
+window.batalEdit = batalEdit;
+window.toggleKotak = toggleKotak;
+window.kembali = function(){
+  namaRiwayatAktif = '';
+  document.getElementById('halamanRiwayat').classList.remove('active');
+  document.getElementById('halamanUtama').classList.add('active');
+}
 </script>
 </body>
 </html>
