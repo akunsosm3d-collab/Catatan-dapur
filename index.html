@@ -62,7 +62,18 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 
 .item-belanja{display:flex;gap:8px;margin-top:8px;align-items:center}
 .item-belanja input{flex:1;margin:0}
-.hapus-item{background:#dc3545;color:white;border:none;border-radius:8px;padding:8px 12px;cursor:pointer}
+.hapus-item{
+  background:#dc3545;
+  color:white;
+  border:none;
+  border-radius:8px;
+  width:15px;
+  height:15px;
+  cursor:pointer;
+  font-size:14px;
+  font-weight:700;
+  flex-shrink:0;
+}
 .hasil-item{background:#f8f9fa;padding:10px;border-radius:10px;margin-top:8px;display:flex;justify-content:space-between}
 .total-box{background:#d63384;color:white;padding:15px;border-radius:15px;margin-top:15px;text-align:center;font-size:18px;font-weight:700}
 </style>
@@ -71,7 +82,7 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 
 <!-- HALAMAN UTAMA -->
 <div class="page active" id="halamanUtama">
-<div class="header"><h2>Catatan Dapur Berkah 💕</h2></div>
+<div class="header"><h2>Catatan Dapur Umi 💕</h2></div>
 <div class="content">
 <div class="btn-row">
 <button id="btnTambah" onclick="toggleKotak()">+ Tambah</button>
@@ -119,11 +130,7 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 </div>
 <div class="content">
 <h3 style="margin-bottom:15px">Ketik barang yang mau dibeli</h3>
-<div id="listBelanja">
-<div class="item-belanja">
-<input class="namaBelanja" placeholder="Contoh: Ayam">
-</div>
-</div>
+<div id="listBelanja"></div>
 <button class="tambah-barang" onclick="tambahBarisBelanja()">+ Tambah Barang</button>
 <button class="simpan" onclick="periksaTotal()" style="width:100%;margin-top:15px">Hitung Total</button>
 <div id="hasilBelanja"></div>
@@ -157,24 +164,55 @@ const db = getFirestore(app);
 let data = [];
 let modeEdit = -1;
 let namaRiwayatAktif = '';
+let halamanAktif = 'utama';
 
-// Enter untuk tambah baris baru di halaman belanja
+// Fungsi buat bikin 1 baris input + tombol X kecil
+function buatBarisBelanja(){
+  let div = document.createElement('div');
+  div.className = 'item-belanja';
+
+  let input = document.createElement('input');
+  input.className = 'namaBelanja';
+  input.placeholder = 'Contoh: Ayam';
+
+  let btnHapus = document.createElement('button');
+  btnHapus.className = 'hapus-item';
+  btnHapus.innerText = 'X';
+  btnHapus.type = 'button';
+  btnHapus.onclick = function(){
+    div.remove();
+  }
+
+  div.appendChild(input);
+  div.appendChild(btnHapus);
+  return div;
+}
+
+// Enter untuk tambah baris baru
 document.addEventListener('keydown', function(e){
   if(e.key === 'Enter'){
     let target = e.target;
-    // Cek kalau yang aktif itu input nama barang
     if(target.classList.contains('namaBelanja')){
-      e.preventDefault(); // biar gak submit form
-      tambahBarisBelanja();
-      
-      // Auto fokus ke input baru
+      e.preventDefault();
       let inputs = document.querySelectorAll('.namaBelanja');
-      inputs[inputs.length - 1].focus();
+
+      if(target === inputs[inputs.length - 1] && target.value.trim()!== ''){
+        tambahBarisBelanja();
+      } else if(target.value.trim() === ''){
+        periksaTotal();
+      }
     }
   }
 });
 
-// Load data dari Firebase pas buka
+// Back button HP/Android
+window.addEventListener('popstate', function(e){
+  if(halamanAktif!== 'utama'){
+    kembaliKeUtama();
+  }
+});
+
+// Load data dari Firebase
 async function loadData(){
   const querySnapshot = await getDocs(collection(db, "barang"));
   data = [];
@@ -189,21 +227,24 @@ loadData();
 window.bukaBelanja = function(){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('halamanBelanja').classList.add('active');
+  halamanAktif = 'belanja';
+  history.pushState({page:'belanja'}, '', '#belanja');
   resetBelanja();
 }
 
 window.kembaliKeUtama = function(){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('halamanUtama').classList.add('active');
+  halamanAktif = 'utama';
+  history.replaceState({page:'utama'}, '', '#');
 }
 
 window.kembali = function(){
   namaRiwayatAktif = '';
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById('halamanUtama').classList.add('active');
+  kembaliKeUtama();
 }
 
-// Fungsi simpan ke Firebase
+// Simpan ke Firebase
 async function simpan(){
   let tgl = document.getElementById('tanggal').value;
   let nama = document.getElementById('nama').value.trim();
@@ -235,12 +276,12 @@ async function simpan(){
   if(namaRiwayatAktif) bukaRiwayat(namaRiwayatAktif);
 }
 
-// Fungsi hapus dari Firebase
-async function hapus(i){
+// Hapus pake idFirebase biar pasti
+async function hapusData(idFirebase){
   if(confirm('Yakin hapus data ini?')){
-    await deleteDoc(doc(db, "barang", data[i].idFirebase));
-    loadData();
-    bukaRiwayat(namaRiwayatAktif);
+    await deleteDoc(doc(db, "barang", idFirebase));
+    await loadData();
+    if(namaRiwayatAktif) bukaRiwayat(namaRiwayatAktif);
   }
 }
 
@@ -298,11 +339,13 @@ window.bukaRiwayat = function(namaBarang){
   namaRiwayatAktif = namaBarang;
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('halamanRiwayat').classList.add('active');
+  halamanAktif = 'riwayat';
+  history.pushState({page:'riwayat'}, '', '#riwayat');
   document.getElementById('judulRiwayat').innerText = 'Riwayat ' + namaBarang;
 
   let riwayat = data.filter(d=>d.nama==namaBarang).sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
   let html = '';
-  riwayat.forEach((d, idx)=>{
+  riwayat.forEach((d)=>{
     html += `<div class="riwayat-item">
     <div class="riwayat-top">
     <span>${formatTanggal(d.tanggal)}</span>
@@ -312,15 +355,16 @@ window.bukaRiwayat = function(namaBarang){
     ${d.kategori || '-'} • ${d.versi || '-'} • Masa: ${d.masa || '-'} hari
     </div>
     <div class="riwayat-aksi">
-    <button class="edit" onclick="editData(${idx})">Edit</button>
-    <button class="hapus" onclick="hapus(${idx})">Hapus</button>
+    <button class="edit" onclick="editData('${d.idFirebase}')">Edit</button>
+    <button class="hapus" onclick="hapusData('${d.idFirebase}')">Hapus</button>
     </div>
     </div>`;
   });
   document.getElementById('listRiwayat').innerHTML = html;
 }
 
-window.editData = function(i){
+window.editData = function(idFirebase){
+  let i = data.findIndex(d => d.idFirebase === idFirebase);
   modeEdit = i;
   let d = data[i];
   document.getElementById('tanggal').value = d.tanggal;
@@ -342,15 +386,15 @@ function formatTanggal(tgl){
 }
 
 function resetBelanja(){
-  document.getElementById('listBelanja').innerHTML = '<div class="item-belanja"><input class="namaBelanja" placeholder="Contoh: Ayam"></div>';
+  document.getElementById('listBelanja').innerHTML = '';
+  document.getElementById('listBelanja').appendChild(buatBarisBelanja());
   document.getElementById('hasilBelanja').innerHTML = '';
 }
 
 window.tambahBarisBelanja = function(){
-  let div = document.createElement('div');
-  div.className = 'item-belanja';
-  div.innerHTML = '<input class="namaBelanja" placeholder="Contoh: Ayam"><button class="hapus-item" onclick="this.parentElement.remove()">X</button>';
-  document.getElementById('listBelanja').appendChild(div);
+  document.getElementById('listBelanja').appendChild(buatBarisBelanja());
+  let inputs = document.querySelectorAll('.namaBelanja');
+  inputs[inputs.length - 1].focus();
 }
 
 window.periksaTotal = function(){
@@ -401,6 +445,7 @@ window.periksaTotal = function(){
 window.simpan = simpan;
 window.batalEdit = batalEdit;
 window.toggleKotak = toggleKotak;
+window.hapusData = hapusData;
 </script>
 </body>
 </html>
