@@ -16,14 +16,30 @@ body{background:#f8f9fa;max-width:500px;margin:auto;min-height:100vh}
 #btnTambah{background:linear-gradient(135deg,#d63384,#ff6b9d);color:white;box-shadow:0 4px 12px rgba(214,51,132,0.3)}
 #btnBelanja{background:white;color:#d63384;border:2px solid #d63384}
 
-#kotakInput,#kotakBelanja{display:none;background:white;padding:20px;border-radius:20px;margin-top:15px;box-shadow:0 4px 20px rgba(0,0,0,0.08)}
+#kotakInput{background:white;padding:20px;border-radius:20px;margin-top:15px;box-shadow:0 4px 20px rgba(0,0,0,0.08);display:none}
 label{font-size:13px;color:#666;margin-top:10px;display:block;font-weight:500}
 input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;margin-top:5px;font-size:15px;background:#fafafa}
 .btn-group{display:flex;gap:10px;margin-top:15px}
 .btn-group button{flex:1;padding:12px;border:none;border-radius:12px;font-weight:600;cursor:pointer}
-.simpan{background:#d63384;color:white}
+.simpan{
+  background:#d63384;
+  color:white;
+  padding:18px;
+  font-size:17px;
+  border-radius:15px;
+  font-weight:600;
+}
 .batal{background:#e9ecef;color:#666}
-.tambah-barang{background:#28a745;color:white;width:100%;margin-top:10px}
+.tambah-barang{
+  background:#28a745;
+  color:white;
+  width:100%;
+  margin-top:10px;
+  padding:18px;
+  font-size:17px;
+  border-radius:15px;
+  font-weight:600;
+}
 
 .card{background:white;padding:15px;border-radius:18px;margin-top:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);border-left:4px solid #d63384;cursor:pointer}
 .card-top{display:flex;justify-content:space-between;align-items:start;margin-bottom:8px}
@@ -53,12 +69,13 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 </head>
 <body>
 
+<!-- HALAMAN UTAMA -->
 <div class="page active" id="halamanUtama">
 <div class="header"><h2>Catatan Dapur Berkah 💕</h2></div>
 <div class="content">
 <div class="btn-row">
-<button id="btnTambah" onclick="toggleKotak('input')">+ Tambah</button>
-<button id="btnBelanja" onclick="toggleKotak('belanja')">Mau Belanja</button>
+<button id="btnTambah" onclick="toggleKotak()">+ Tambah</button>
+<button id="btnBelanja" onclick="bukaBelanja()">Mau Belanja</button>
 </div>
 
 <div id="kotakInput">
@@ -81,24 +98,11 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 </div>
 </div>
 
-<div id="kotakBelanja">
-<h3>Daftar Belanja</h3>
-<div id="listBelanja">
-<div class="item-belanja">
-<input class="namaBelanja" placeholder="Ketik nama barang">
-</div>
-</div>
-<button onclick="tesFirebase()">Tes Firebase</button>
-<button class="tambah-barang" onclick="tambahBarisBelanja()">+ Tambah Barang</button>
-<button class="simpan" onclick="periksaTotal()" style="width:100%;margin-top:10px">Periksa Total</button>
-<button class="batal" onclick="toggleKotak('belanja')" style="width:100%;margin-top:5px">Tutup</button>
-<div id="hasilBelanja"></div>
-</div>
-
 <div id="listBarang"></div>
 </div>
 </div>
 
+<!-- HALAMAN RIWAYAT -->
 <div class="page" id="halamanRiwayat">
 <div class="header">
 <button class="back-btn" onclick="kembali()">← Kembali</button>
@@ -106,6 +110,26 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 </div>
 <div class="content" id="listRiwayat"></div>
 </div>
+
+<!-- HALAMAN BELANJA -->
+<div class="page" id="halamanBelanja">
+<div class="header">
+<button class="back-btn" onclick="kembaliKeUtama()">← Kembali</button>
+<h2>Daftar Belanja</h2>
+</div>
+<div class="content">
+<h3 style="margin-bottom:15px">Ketik barang yang mau dibeli</h3>
+<div id="listBelanja">
+<div class="item-belanja">
+<input class="namaBelanja" placeholder="Contoh: Ayam">
+</div>
+</div>
+<button class="tambah-barang" onclick="tambahBarisBelanja()">+ Tambah Barang</button>
+<button class="simpan" onclick="periksaTotal()" style="width:100%;margin-top:15px">Hitung Total</button>
+<div id="hasilBelanja"></div>
+</div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
 import {
@@ -134,6 +158,22 @@ let data = [];
 let modeEdit = -1;
 let namaRiwayatAktif = '';
 
+// Enter untuk tambah baris baru di halaman belanja
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Enter'){
+    let target = e.target;
+    // Cek kalau yang aktif itu input nama barang
+    if(target.classList.contains('namaBelanja')){
+      e.preventDefault(); // biar gak submit form
+      tambahBarisBelanja();
+      
+      // Auto fokus ke input baru
+      let inputs = document.querySelectorAll('.namaBelanja');
+      inputs[inputs.length - 1].focus();
+    }
+  }
+});
+
 // Load data dari Firebase pas buka
 async function loadData(){
   const querySnapshot = await getDocs(collection(db, "barang"));
@@ -144,6 +184,24 @@ async function loadData(){
   tampilCard();
 }
 loadData();
+
+// Navigasi halaman
+window.bukaBelanja = function(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('halamanBelanja').classList.add('active');
+  resetBelanja();
+}
+
+window.kembaliKeUtama = function(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('halamanUtama').classList.add('active');
+}
+
+window.kembali = function(){
+  namaRiwayatAktif = '';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('halamanUtama').classList.add('active');
+}
 
 // Fungsi simpan ke Firebase
 async function simpan(){
@@ -168,7 +226,6 @@ async function simpan(){
   if(modeEdit == -1){
     await addDoc(collection(db, "barang"), item);
   } else {
-    // Update - hapus lama, tambah baru
     await deleteDoc(doc(db, "barang", data[modeEdit].idFirebase));
     await addDoc(collection(db, "barang"), item);
   }
@@ -187,15 +244,9 @@ async function hapus(i){
   }
 }
 
-// Sisa fungsi kamu biarin aja, cuma ganti `data` jadi global
-function toggleKotak(jenis){
-  document.getElementById('kotakInput').style.display = 'none';
-  document.getElementById('kotakBelanja').style.display = 'none';
-  if(jenis=='input') document.getElementById('kotakInput').style.display = 'block';
-  if(jenis=='belanja'){
-    document.getElementById('kotakBelanja').style.display = 'block';
-    resetBelanja();
-  }
+function toggleKotak(){
+  let kotak = document.getElementById('kotakInput');
+  kotak.style.display = kotak.style.display=='block'? 'none' : 'block';
 }
 
 function batalEdit(){
@@ -245,7 +296,7 @@ function tampilCard(){
 
 window.bukaRiwayat = function(namaBarang){
   namaRiwayatAktif = namaBarang;
-  document.getElementById('halamanUtama').classList.remove('active');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('halamanRiwayat').classList.add('active');
   document.getElementById('judulRiwayat').innerText = 'Riwayat ' + namaBarang;
 
@@ -282,6 +333,7 @@ window.editData = function(i){
   document.getElementById('btnSimpan').innerText = 'Update';
   document.getElementById('nama').disabled = true;
   document.getElementById('kotakInput').style.display = 'block';
+  kembaliKeUtama();
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -290,14 +342,14 @@ function formatTanggal(tgl){
 }
 
 function resetBelanja(){
-  document.getElementById('listBelanja').innerHTML = '<div class="item-belanja"><input class="namaBelanja" placeholder="Ketik nama barang"></div>';
+  document.getElementById('listBelanja').innerHTML = '<div class="item-belanja"><input class="namaBelanja" placeholder="Contoh: Ayam"></div>';
   document.getElementById('hasilBelanja').innerHTML = '';
 }
 
 window.tambahBarisBelanja = function(){
   let div = document.createElement('div');
   div.className = 'item-belanja';
-  div.innerHTML = '<input class="namaBelanja" placeholder="Ketik nama barang"><button class="hapus-item" onclick="this.parentElement.remove()">X</button>';
+  div.innerHTML = '<input class="namaBelanja" placeholder="Contoh: Ayam"><button class="hapus-item" onclick="this.parentElement.remove()">X</button>';
   document.getElementById('listBelanja').appendChild(div);
 }
 
@@ -345,29 +397,10 @@ window.periksaTotal = function(){
   }
 }
 
-window.tesFirebase = async function(){
-  try{
-    await addDoc(collection(db,"barang"), {
-      nama:"Tes",
-      tanggal:new Date().toISOString()
-    });
-    alert("Berhasil kirim ke Firebase ✅");
-    loadData();
-  }catch(error){
-    alert("ERROR: " + error.message);
-    console.error(error);
-  }
-}
-
 // Kasih akses ke HTML onclick
 window.simpan = simpan;
 window.batalEdit = batalEdit;
 window.toggleKotak = toggleKotak;
-window.kembali = function(){
-  namaRiwayatAktif = '';
-  document.getElementById('halamanRiwayat').classList.remove('active');
-  document.getElementById('halamanUtama').classList.add('active');
-}
 </script>
 </body>
 </html>
