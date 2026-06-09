@@ -7,8 +7,10 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
 body{background:#f8f9fa;max-width:500px;margin:auto;min-height:100vh}
-.header{text-align:center;padding:20px;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.05)}
+.header{text-align:center;padding:20px;background:white;box-shadow:0 2px 8px rgba(0,0,0,0.05);position:relative}
 .header h2{color:#d63384;font-size:22px}
+.notif-btn{position:absolute;right:18px;top:18px;font-size:26px;cursor:pointer;line-height:1}
+.badge-notif{position:absolute;top:-6px;right:-6px;background:#ff3b30;color:white;border-radius:50%;width:22px;height:22px;font-size:12px;display:flex;align-items:center;justify-content:center;font-weight:700;display:none}
 .content{padding:20px}
 
 .btn-row{display:flex;gap:10px;margin-bottom:15px}
@@ -21,32 +23,18 @@ label{font-size:13px;color:#666;margin-top:10px;display:block;font-weight:500}
 input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;margin-top:5px;font-size:15px;background:#fafafa}
 .btn-group{display:flex;gap:10px;margin-top:15px}
 .btn-group button{flex:1;padding:12px;border:none;border-radius:12px;font-weight:600;cursor:pointer}
-.simpan{
-  background:#d63384;
-  color:white;
-  padding:18px;
-  font-size:17px;
-  border-radius:15px;
-  font-weight:600;
-}
+.simpan{background:#d63384;color:white;padding:18px;font-size:17px;border-radius:15px;font-weight:600}
 .batal{background:#e9ecef;color:#666}
-.tambah-barang{
-  background:#28a745;
-  color:white;
-  width:100%;
-  margin-top:10px;
-  padding:18px;
-  font-size:17px;
-  border-radius:15px;
-  font-weight:600;
-}
+.tambah-barang{background:#28a745;color:white;width:100%;margin-top:10px;padding:18px;font-size:17px;border-radius:15px;font-weight:600}
 
 .card{background:white;padding:15px;border-radius:18px;margin-top:12px;box-shadow:0 2px 10px rgba(0,0,0,0.05);border-left:4px solid #d63384;cursor:pointer}
 .card-top{display:flex;justify-content:space-between;align-items:start;margin-bottom:8px}
 .card-nama{font-size:16px;font-weight:600;color:#333}
 .card-harga{font-size:18px;font-weight:700;color:#d63384}
-.card-info{font-size:13px;color:#888}
+.card-info{font-size:13px;color:#888;display:flex;align-items:center;gap:6px;justify-content:space-between}
 .badge{font-size:11px;background:#ffe0e9;color:#d63384;padding:3px 8px;border-radius:20px;font-weight:600}
+.btn-lonceng{background:none;border:none;font-size:17px;cursor:pointer;opacity:0.35;padding:4px;margin-left:4px}
+.btn-lonceng.aktif{opacity:1;color:#ff9500}
 
 .page{display:none}
 .page.active{display:block}
@@ -62,27 +50,28 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 
 .item-belanja{display:flex;gap:8px;margin-top:8px;align-items:center}
 .item-belanja input{flex:1;margin:0}
-.hapus-item{
-  background:#dc3545;
-  color:white;
-  border:none;
-  border-radius:8px;
-  width:15px;
-  height:15px;
-  cursor:pointer;
-  font-size:14px;
-  font-weight:700;
-  flex-shrink:0;
-}
+.hapus-item{background:#dc3545;color:white;border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:14px;font-weight:700;flex-shrink:0}
 .hasil-item{background:#f8f9fa;padding:10px;border-radius:10px;margin-top:8px;display:flex;justify-content:space-between}
 .total-box{background:#d63384;color:white;padding:15px;border-radius:15px;margin-top:15px;text-align:center;font-size:18px;font-weight:700}
+
+.search-box{margin-bottom:12px}
+.search-box input{background:white;border:2px solid #e0e0e0}
+.search-box input:focus{border-color:#d63384;outline:none}
+
+.modal-notif{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:none;align-items:center;justify-content:center;z-index:999}
+.modal-content{background:white;padding:20px;border-radius:20px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-content h3{color:#d63384;margin-bottom:15px}
+.notif-item{padding:10px;border-left:3px solid #ff9500;background:#fff7e6;margin-top:8px;border-radius:8px;font-size:14px}
+.close-modal{float:right;font-size:24px;cursor:pointer;color:#999}
 </style>
 </head>
 <body>
 
-<!-- HALAMAN UTAMA -->
 <div class="page active" id="halamanUtama">
-<div class="header"><h2>Catatan Dapur Umi 💕</h2></div>
+<div class="header">
+<h2>Catatan Dapur Umi 💕</h2>
+<div class="notif-btn" onclick="bukaNotif()">🔔<span class="badge-notif" id="badgeNotif">0</span></div>
+</div>
 <div class="content">
 <div class="btn-row">
 <button id="btnTambah" onclick="toggleKotak()">+ Tambah</button>
@@ -109,11 +98,23 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 </div>
 </div>
 
+<div class="search-box">
+<input id="searchInput" type="text" placeholder="🔍 Cari nama barang..." oninput="searchBarang()">
+</div>
+<div id="filterKategori" style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap"></div>
+
 <div id="listBarang"></div>
 </div>
 </div>
 
-<!-- HALAMAN RIWAYAT -->
+<div class="modal-notif" id="modalNotif">
+<div class="modal-content">
+<span class="close-modal" onclick="tutupNotif()">&times;</span>
+<h3>🔔 Notifikasi Kadaluarsa</h3>
+<div id="listNotif"></div>
+</div>
+</div>
+
 <div class="page" id="halamanRiwayat">
 <div class="header">
 <button class="back-btn" onclick="kembali()">← Kembali</button>
@@ -122,7 +123,6 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 <div class="content" id="listRiwayat"></div>
 </div>
 
-<!-- HALAMAN BELANJA -->
 <div class="page" id="halamanBelanja">
 <div class="header">
 <button class="back-btn" onclick="kembaliKeUtama()">← Kembali</button>
@@ -139,14 +139,7 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
+import {getFirestore,collection,addDoc,getDocs,deleteDoc,doc} from "https://www.gstatic.com/firebasejs/12.0.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDeQOFjhyYMBP230Wzxz75_Yhf0Ls6ROM0",
@@ -165,37 +158,136 @@ let data = [];
 let modeEdit = -1;
 let namaRiwayatAktif = '';
 let halamanAktif = 'utama';
+let kategoriAktif = 'Semua';
+let keywordSearch = '';
+let notifSettings = JSON.parse(localStorage.getItem('notifSettings') || '{}'); // sekarang key nya = nama barang
 
-// Fungsi buat bikin 1 baris input + tombol X kecil
+function bersihkanNotifLama(namaBarang, idBaru){
+  // hapus semua notif lama untuk nama barang ini kecuali idBaru
+  Object.keys(notifSettings).forEach(key => {
+    let item = data.find(d => d.idFirebase === key && d.nama === namaBarang);
+    if(item && item.idFirebase!== idBaru){
+      delete notifSettings[key];
+    }
+  });
+  // pindahin setting ke id baru
+  let oldKey = Object.keys(notifSettings).find(k => {
+    let item = data.find(d => d.idFirebase === k && d.nama === namaBarang);
+    return item && item.idFirebase!== idBaru;
+  });
+  if(oldKey && notifSettings[oldKey]){
+    notifSettings[idBaru] = notifSettings[oldKey];
+    delete notifSettings[oldKey];
+  }
+  localStorage.setItem('notifSettings', JSON.stringify(notifSettings));
+}
+
+function cekNotifikasi(){
+  let notifList = [];
+  let hariIni = new Date();
+  hariIni.setHours(0,0,0,0);
+
+  // ambil barang terbaru per nama
+  let grup = {};
+  data.forEach(d=>{
+    if(!grup[d.nama]) grup[d.nama] = [];
+    grup[d.nama].push(d);
+  });
+
+  Object.keys(grup).forEach(nama => {
+    let riwayat = grup[nama].sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+    let terbaru = riwayat[0];
+
+    if(!terbaru.masa ||!notifSettings[terbaru.idFirebase] || notifSettings[terbaru.idFirebase] <= 0) return;
+
+    let tglBeli = new Date(terbaru.tanggal);
+    tglBeli.setHours(0,0,0,0);
+    let tglKadaluarsa = new Date(tglBeli);
+    tglKadaluarsa.setDate(tglBeli.getDate() + parseInt(terbaru.masa));
+    let selisihHari = Math.ceil((tglKadaluarsa - hariIni) / (1000*60*60*24));
+    let hariNotif = parseInt(notifSettings[terbaru.idFirebase]);
+
+    if(selisihHari <= hariNotif && selisihHari >= 0){
+      notifList.push({
+        nama: terbaru.nama,
+        versi: terbaru.versi,
+        sisa: selisihHari,
+        kadaluarsa: tglKadaluarsa.toLocaleDateString('id-ID',{day:'numeric',month:'short'})
+      });
+    }
+  });
+
+  let badge = document.getElementById('badgeNotif');
+  if(notifList.length > 0){
+    badge.style.display = 'flex';
+    badge.innerText = notifList.length;
+  } else {
+    badge.style.display = 'none';
+  }
+  window.currentNotif = notifList;
+}
+
+window.bukaNotif = function(){
+  cekNotifikasi();
+  let html = '';
+  if(window.currentNotif.length == 0){
+    html = '<p style="color:#888;text-align:center;padding:20px">Tidak ada barang yang mau kadaluarsa 🎉</p>';
+  } else {
+    window.currentNotif.forEach(n => {
+      html += `<div class="notif-item">
+      <b>${n.nama} ${n.versi? '('+n.versi+')' : ''}</b><br>
+      Sisa ${n.sisa} hari lagi • Kadaluarsa: ${n.kadaluarsa}
+      </div>`;
+    });
+  }
+  document.getElementById('listNotif').innerHTML = html;
+  document.getElementById('modalNotif').style.display = 'flex';
+}
+window.tutupNotif = function(){
+  document.getElementById('modalNotif').style.display = 'none';
+}
+
+window.setNotif = function(idFirebase, nama, e){
+  e.stopPropagation();
+  let hari = prompt(`Notifikasi "${nama}" berapa hari sebelum kadaluarsa?\nContoh: 2 = notif 2 hari sebelum habis\nKetik 0 untuk matikan`);
+  if(hari === null) return;
+  hari = parseInt(hari);
+  if(isNaN(hari) || hari < 0){
+    alert('Masukkan angka yang valid ya mas');
+    return;
+  }
+  if(hari == 0){
+    delete notifSettings[idFirebase];
+  } else {
+    notifSettings[idFirebase] = hari;
+  }
+  localStorage.setItem('notifSettings', JSON.stringify(notifSettings));
+  tampilCard();
+  cekNotifikasi();
+}
+
 function buatBarisBelanja(){
   let div = document.createElement('div');
   div.className = 'item-belanja';
-
   let input = document.createElement('input');
   input.className = 'namaBelanja';
   input.placeholder = 'Contoh: Ayam';
-
   let btnHapus = document.createElement('button');
   btnHapus.className = 'hapus-item';
   btnHapus.innerText = 'X';
   btnHapus.type = 'button';
-  btnHapus.onclick = function(){
-    div.remove();
-  }
-
+  btnHapus.onclick = function(){div.remove();}
   div.appendChild(input);
   div.appendChild(btnHapus);
   return div;
 }
 
-// Enter untuk tambah baris baru
 document.addEventListener('keydown', function(e){
   if(e.key === 'Enter'){
     let target = e.target;
     if(target.classList.contains('namaBelanja')){
       e.preventDefault();
       let inputs = document.querySelectorAll('.namaBelanja');
-
       if(target === inputs[inputs.length - 1] && target.value.trim()!== ''){
         tambahBarisBelanja();
       } else if(target.value.trim() === ''){
@@ -205,25 +297,22 @@ document.addEventListener('keydown', function(e){
   }
 });
 
-// Back button HP/Android
 window.addEventListener('popstate', function(e){
-  if(halamanAktif!== 'utama'){
-    kembaliKeUtama();
-  }
+  if(halamanAktif!== 'utama'){kembaliKeUtama();}
 });
 
-// Load data dari Firebase
 async function loadData(){
   const querySnapshot = await getDocs(collection(db, "barang"));
   data = [];
   querySnapshot.forEach((docSnap) => {
     data.push({ idFirebase: docSnap.id,...docSnap.data() });
   });
+  tampilFilterKategori();
   tampilCard();
+  cekNotifikasi();
 }
 loadData();
 
-// Navigasi halaman
 window.bukaBelanja = function(){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('halamanBelanja').classList.add('active');
@@ -231,55 +320,57 @@ window.bukaBelanja = function(){
   history.pushState({page:'belanja'}, '', '#belanja');
   resetBelanja();
 }
-
 window.kembaliKeUtama = function(){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('halamanUtama').classList.add('active');
   halamanAktif = 'utama';
   history.replaceState({page:'utama'}, '', '#');
 }
-
 window.kembali = function(){
   namaRiwayatAktif = '';
   kembaliKeUtama();
 }
 
-// Simpan ke Firebase
 async function simpan(){
   let tgl = document.getElementById('tanggal').value;
   let nama = document.getElementById('nama').value.trim();
   let harga = document.getElementById('harga').value;
-
   if(!tgl ||!nama ||!harga){
     alert('Tanggal, Nama, Harga wajib diisi ya mas!');
     return;
   }
-
   let item = {
     tanggal: tgl,
     nama: nama,
-    kategori: document.getElementById('kategori').value,
+    kategori: document.getElementById('kategori').value.trim(),
     harga: Number(harga),
     versi: document.getElementById('versi').value,
     masa: document.getElementById('masa').value
   };
 
+  let idBaru = '';
   if(modeEdit == -1){
-    await addDoc(collection(db, "barang"), item);
+    let docRef = await addDoc(collection(db, "barang"), item);
+    idBaru = docRef.id;
   } else {
     await deleteDoc(doc(db, "barang", data[modeEdit].idFirebase));
-    await addDoc(collection(db, "barang"), item);
+    let docRef = await addDoc(collection(db, "barang"), item);
+    idBaru = docRef.id;
   }
 
+  // bersihkan notif lama, pindahin ke id baru
+  bersihkanNotifLama(nama, idBaru);
+
   batalEdit();
-  loadData();
+  await loadData();
   if(namaRiwayatAktif) bukaRiwayat(namaRiwayatAktif);
 }
 
-// Hapus pake idFirebase biar pasti
 async function hapusData(idFirebase){
   if(confirm('Yakin hapus data ini?')){
     await deleteDoc(doc(db, "barang", idFirebase));
+    delete notifSettings[idFirebase];
+    localStorage.setItem('notifSettings', JSON.stringify(notifSettings));
     await loadData();
     if(namaRiwayatAktif) bukaRiwayat(namaRiwayatAktif);
   }
@@ -289,7 +380,6 @@ function toggleKotak(){
   let kotak = document.getElementById('kotakInput');
   kotak.style.display = kotak.style.display=='block'? 'none' : 'block';
 }
-
 function batalEdit(){
   document.getElementById('tanggal').value='';
   document.getElementById('nama').value='';
@@ -304,23 +394,59 @@ function batalEdit(){
   document.getElementById('kotakInput').style.display = 'none';
 }
 
+window.searchBarang = function(){
+  keywordSearch = document.getElementById('searchInput').value.toLowerCase();
+  tampilCard();
+}
+
+function tampilFilterKategori(){
+  let kategoriSet = new Set(['Semua']);
+  data.forEach(d => {
+    if(d.kategori && d.kategori.trim()!=='') kategoriSet.add(d.kategori.trim());
+  });
+  let html = '';
+  kategoriSet.forEach(kat => {
+    let aktifClass = kat === kategoriAktif? 'background:#d63384;color:white' : 'background:#f0f0f0;color:#333';
+    html += `<button onclick="filterByKategori('${kat}')" style="${aktifClass};border:none;padding:6px 12px;border-radius:20px;font-size:13px;cursor:pointer;font-weight:600">${kat}</button>`;
+  });
+  document.getElementById('filterKategori').innerHTML = html;
+}
+window.filterByKategori = function(kat){
+  kategoriAktif = kat;
+  tampilFilterKategori();
+  tampilCard();
+}
+
 function tampilCard(){
   let grup = {};
-  data.forEach(d=>{
+  let dataFilter = kategoriAktif === 'Semua'? data : data.filter(d => d.kategori === kategoriAktif);
+  if(keywordSearch){
+    dataFilter = dataFilter.filter(d => d.nama.toLowerCase().includes(keywordSearch));
+  }
+
+  dataFilter.forEach(d=>{
     if(!grup[d.nama]) grup[d.nama] = [];
     grup[d.nama].push(d);
   });
 
-  let html = '';
-  for(let nama in grup){
+  let grupArray = Object.keys(grup).map(nama => {
     let riwayat = grup[nama].sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
-    let terbaru = riwayat[0];
+    return {nama: nama, riwayat: riwayat, terbaru: riwayat[0]};
+  });
+  grupArray.sort((a,b)=> new Date(b.terbaru.tanggal) - new Date(a.terbaru.tanggal));
+
+  let html = '';
+  grupArray.forEach(grupItem=>{
+    let nama = grupItem.nama;
+    let riwayat = grupItem.riwayat;
+    let terbaru = grupItem.terbaru;
     let jumlahBeli = riwayat.length;
+    let loncengAktif = notifSettings[terbaru.idFirebase] > 0? 'aktif' : '';
 
     html += `<div class="card" onclick="bukaRiwayat('${nama}')">
     <div class="card-top">
     <div>
-    <div class="card-nama">${nama}</div>
+    <div class="card-nama">${nama} ${terbaru.kategori? `<span style="font-size:12px;color:#888">(${terbaru.kategori})</span>` : ''}</div>
     <div class="card-info">${terbaru.kategori || 'Tanpa kategori'} • ${terbaru.versi || '-'}</div>
     </div>
     <div style="text-align:right">
@@ -328,10 +454,13 @@ function tampilCard(){
     <div class="badge">${jumlahBeli}x beli</div>
     </div>
     </div>
-    <div class="card-info">Terakhir: ${formatTanggal(terbaru.tanggal)}</div>
+    <div class="card-info">
+    <span>Terakhir: ${formatTanggal(terbaru.tanggal)} • Masa: ${terbaru.masa || '-'} hari</span>
+    <button class="btn-lonceng ${loncengAktif}" onclick="setNotif('${terbaru.idFirebase}', '${nama}', event)">🔔</button>
+    </div>
     </div>`;
-  }
-  if(html=='') html = '<div style="text-align:center;color:#aaa;padding:40px">Belum ada barang</div>';
+  });
+  if(html=='') html = '<div style="text-align:center;color:#aaa;padding:40px">Barang tidak ditemukan</div>';
   document.getElementById('listBarang').innerHTML = html;
 }
 
@@ -402,17 +531,14 @@ window.periksaTotal = function(){
   let hasilDiv = document.getElementById('hasilBelanja');
   hasilDiv.innerHTML = '';
   let total = 0;
-
   inputs.forEach(input=>{
     let namaCari = input.value.trim().toLowerCase();
     if(!namaCari) return;
-
     let dataBarang = data.filter(d=>d.nama.toLowerCase()==namaCari);
     if(dataBarang.length==0){
       hasilDiv.innerHTML += `<div class="hasil-item" style="color:red">❌ ${input.value} - Belum ada data</div>`;
       return;
     }
-
     let versiMap = {};
     dataBarang.forEach(d=>{
       if(!versiMap[d.versi] || new Date(d.tanggal) > new Date(versiMap[d.versi].tanggal)){
@@ -420,7 +546,6 @@ window.periksaTotal = function(){
       }
     });
     let versiList = Object.values(versiMap);
-
     if(versiList.length==1){
       let item = versiList[0];
       total += Number(item.harga);
@@ -435,13 +560,11 @@ window.periksaTotal = function(){
       }
     }
   });
-
   if(total>0){
     hasilDiv.innerHTML += `<div class="total-box">Total Belanja: Rp ${total.toLocaleString('id-ID')}</div>`;
   }
 }
 
-// Kasih akses ke HTML onclick
 window.simpan = simpan;
 window.batalEdit = batalEdit;
 window.toggleKotak = toggleKotak;
