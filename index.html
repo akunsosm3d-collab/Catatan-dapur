@@ -66,6 +66,144 @@ input{width:100%;padding:12px;border:1.5px solid #e0e0e0;border-radius:12px;marg
 </style>
 </head>
 <body>
+  <!-- Kalkulator Mini Mengambang - Final Fix 100% -->
+<style>
+#calcBtn{
+  position:fixed;
+  top:18px;
+  left:18px;
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#d63384,#ff6b9d);
+  color:white;
+  border:none;
+  font-size:20px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 4px 12px rgba(214,51,132,0.4);
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+#calcPopup{
+  position:fixed;
+  top:70px;
+  left:18px;
+  width:240px;
+  background:white;
+  border-radius:16px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.15);
+  padding:12px;
+  display:none;
+  z-index:1001;
+}
+#calcDisplay{
+  width:100%;
+  height:50px;
+  font-size:24px;
+  text-align:right;
+  padding:8px 10px;
+  border:2px solid #e0e0e0;
+  border-radius:10px;
+  margin-bottom:10px;
+  background:#fafafa;
+  color:#333;
+  font-weight:600;
+}
+.calcGrid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+}
+.calcGrid button{
+  height:42px;
+  border:none;
+  border-radius:10px;
+  font-size:16px;
+  font-weight:600;
+  cursor:pointer;
+  background:#f0f0f0;
+  color:#333;
+}
+.calcGrid button:active{background:#ddd}
+.calcGrid .op{background:#ffe0e9;color:#d63384}
+.calcGrid .eq{background:#d63384;color:white;grid-column:span 2}
+.calcGrid .clear{background:#dc3545;color:white}
+.calcGrid .back{background:#6c757d;color:white}
+</style>
+
+<button id="calcBtn">Σ</button>
+
+<div id="calcPopup">
+  <input id="calcDisplay" type="text" readonly>
+  <div class="calcGrid">
+    <button class="clear" onclick="calcClear()">C</button>
+    <button class="back" onclick="calcBackspace()">⌫</button>
+    <button onclick="calcInput('.')">.</button>
+    <button class="op" onclick="calcInput('/')">÷</button>
+    
+    <button onclick="calcInput('7')">7</button>
+    <button onclick="calcInput('8')">8</button>
+    <button onclick="calcInput('9')">9</button>
+    <button class="op" onclick="calcInput('*')">×</button>
+    
+    <button onclick="calcInput('4')">4</button>
+    <button onclick="calcInput('5')">5</button>
+    <button onclick="calcInput('6')">6</button>
+    <button class="op" onclick="calcInput('-')">-</button>
+    
+    <button onclick="calcInput('1')">1</button>
+    <button onclick="calcInput('2')">2</button>
+    <button onclick="calcInput('3')">3</button>
+    <button class="op" onclick="calcInput('+')">+</button>
+    
+    <button onclick="calcInput('0')">0</button>
+    <button onclick="calcInput('00')">00</button>
+    <button class="eq" onclick="calcResult()">=</button>
+  </div>
+</div>
+
+<script>
+let calcStr = '';
+const btn = document.getElementById('calcBtn');
+const popup = document.getElementById('calcPopup');
+const display = document.getElementById('calcDisplay');
+
+btn.onclick = () => {
+  popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+  if(popup.style.display === 'block') display.focus();
+}
+
+document.addEventListener('click', e => {
+  if(!popup.contains(e.target) && e.target !== btn){
+    popup.style.display = 'none';
+  }
+})
+
+function calcInput(val){
+  calcStr += val;
+  display.value = calcStr;
+}
+function calcClear(){
+  calcStr = '';
+  display.value = '';
+}
+function calcBackspace(){
+  calcStr = calcStr.slice(0, -1);
+  display.value = calcStr;
+}
+function calcResult(){
+  try{
+    calcStr = eval(calcStr).toString();
+    display.value = Number(calcStr).toLocaleString('id-ID');
+  }catch{
+    display.value = 'Error';
+    calcStr = '';
+  }
+}
+</script>
 
 <div class="page active" id="halamanUtama">
 <div class="header">
